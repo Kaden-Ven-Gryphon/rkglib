@@ -3,4 +3,17 @@ name = "rkglib"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name = "rkglib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rkgbin"
+path = "src/bin.rs"
+
 [dependencies]
+error-iter = "0.4.1"
+log = "0.4.29"
+minifb = "0.28.0"
+softbuffer = "0.4.6"
+winit = "0.30.12"

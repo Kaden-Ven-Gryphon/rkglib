@@ -7,3 +7,6 @@
 /// This modual contains all math related functions
 pub mod math;
 
+/// This modual contains graphics related objects and methods
+pub mod graphics;
+
