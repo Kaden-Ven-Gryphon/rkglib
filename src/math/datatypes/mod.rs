@@ -4,6 +4,9 @@ pub mod rational;
 /// Contains the struc set which models a set theroy set
 pub mod set;
 
+/// Contains the struct rkgtab which is a table struct simular to pandas or numpy aray
+pub mod rkgtab;
+
 /// Prints the decription of the datatypes modual
 pub fn description() {
 	println!("This is the datatypes modual");
