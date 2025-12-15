@@ -2,7 +2,7 @@ use core::fmt;
 use std::ops::{Shl, ShlAssign};
 
 /// ndarray like data structure
-pub struct RkgTab<T> {
+pub struct RkgTabN<T> {
 	data: Vec<T>,
 	dims: usize,
 	shape: Vec<usize>,
@@ -10,7 +10,7 @@ pub struct RkgTab<T> {
 	label_axis: Vec<usize>
 }
 
-impl<T> RkgTab<T> {
+impl<T: Clone> RkgTabN<T> {
 
 	/// creates a new empty tab
 	pub fn new() -> Self {
@@ -21,6 +21,19 @@ impl<T> RkgTab<T> {
 			labels: Vec::new(),
 			label_axis: Vec::new()
 		}
+	}
+
+	/// clears the table and resizes it to a new shape filled with given values
+	pub fn set_shape(&mut self, shape: &[usize], value: T) {
+		self.dims = shape.len();
+		self.data = Vec::new();
+		self.shape.clear();
+		let mut total_length = 1;
+		for i in shape {
+			total_length *= i;
+			self.shape.push(*i);
+		}
+		self.data.resize(total_length, value);
 	}
 
 	/// returns a vec containing the shape of the tab
@@ -44,7 +57,7 @@ impl<T> RkgTab<T> {
 
 }
 
-impl<T: fmt::Display> fmt::Display for RkgTab<T> {
+impl<T: fmt::Display> fmt::Display for RkgTabN<T> {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		let mut text = String::new();
 		for i in self.data.iter() {
@@ -59,7 +72,7 @@ mod tests {
 	use super::*;
 
 	#[test] fn test_new_1d_and_print() {
-		let mut value: RkgTab<i32> = RkgTab::new();
+		let mut value: RkgTabN<i32> = RkgTabN::new();
 		value.append(&mut [1,2,3,4,5].to_vec(), 0);
 		println!("{value}")
 	}
