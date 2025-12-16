@@ -3,9 +3,9 @@ use minifb::{Key, Scale, ScaleMode, Window, WindowOptions};
 use super::color::ColorARGB32;
 
 /// The default width of new charts and chartwindows
-pub const DEFAULT_WIDTH: usize = 600;
+pub const DEFAULT_WIDTH: usize = 400;
 /// The default hight of new charts and chartwindows
-pub const DEFAULT_HEIGHT: usize = 600;
+pub const DEFAULT_HEIGHT: usize = 400;
 
 /// Color struct for RGBA 32bit
 
@@ -35,7 +35,8 @@ pub trait Chart {
 
 /// Test fractal visulization from the minifb create modified to implement the Chart trait
 pub mod test_fractal_chart;
-
+/// 2d scatter plot that uses a RkgTab as data source
+pub mod scatter_plot;
 
 /// This is the default window that can display chart objects
 pub struct ChartWindow {
