@@ -1,4 +1,5 @@
 /// Wrapper for u32 to store a RGBA 8bit color
+#[derive(Clone, Copy)]
 pub struct ColorARGB32(pub u32);
 
 impl ColorARGB32 {
