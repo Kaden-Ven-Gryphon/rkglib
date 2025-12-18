@@ -42,4 +42,11 @@ impl ColorARGB32 {
 	pub fn alpha(c:u32) -> u8 {
 		return (c & 0xff000000 >> 24) as u8
 	}
+
+	/// new color with new alpha
+	pub fn new_alpha(&self, a: u8) -> Self {
+		Self(
+			(0x00FFFFFF & self.0) | ((a as u32) << 24)
+		)
+	}
 }

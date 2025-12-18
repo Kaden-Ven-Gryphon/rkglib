@@ -38,6 +38,10 @@ pub mod test_fractal_chart;
 /// 2d scatter plot that uses a RkgTab as data source
 pub mod scatter_plot;
 
+// TODO: change this to use standard window and canvas
+// chartwindow contains a normal canvas but with time varibles etc, framerate
+// has its own show function that copys the base windows one, but has time 
+
 /// This is the default window that can display chart objects
 pub struct ChartWindow {
 	/// name of window

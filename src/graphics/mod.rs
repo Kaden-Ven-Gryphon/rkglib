@@ -13,6 +13,7 @@ pub mod window {
 
 
 	/// container for a basic window storing the basic required atributes
+	/// Can implment other show functions to add functionality for input or animation over time
 	pub struct RkgWindow {
 		/// The title of window displayed on the desktop bar
 		pub name: String,
@@ -26,7 +27,6 @@ pub mod window {
 		pub buffer: Vec<u32>,
 		/// the background color of the borders
 		pub background_color: ColorARGB32,
-		window: Option<Window>
 	}
 
 	impl RkgWindow {
@@ -39,45 +39,44 @@ pub mod window {
 				canvas: Canvas::new(CanvasShape{width,height,depth:4}, super::canvas::CanvasOrigin::BottomLeft),
 				buffer: vec![background_color.0; width*height],
 				background_color,
-				window: None
 			}
 		}
 
 		/// opens the window and draws the root canvas to the screen
 		pub fn show(&mut self) {
-		self.window = Some(Window::new(
-			self.name.as_str(),
-			self.width,
-			self.height,
-			WindowOptions {
-				resize: true,
-				scale: Scale::X1,
-				scale_mode: ScaleMode::AspectRatioStretch,
-				..WindowOptions::default()
-			},
-			)
-			.expect("Unable to create the window")
-		);
+			let mut window = Some(Window::new(
+				self.name.as_str(),
+				self.width,
+				self.height,
+				WindowOptions {
+					resize: true,
+					scale: Scale::X1,
+					scale_mode: ScaleMode::AspectRatioStretch,
+					..WindowOptions::default()
+				},
+				)
+				.expect("Unable to create the window")
+			);
 
-		self.window.as_mut().unwrap().set_target_fps(60);
+			window.as_mut().unwrap().set_target_fps(60);
 
-		self.window.as_mut().unwrap().set_background_color(
-			self.background_color.r(),
-			self.background_color.g(),
-			self.background_color.b()
-		);
+			window.as_mut().unwrap().set_background_color(
+				self.background_color.r(),
+				self.background_color.g(),
+				self.background_color.b()
+			);
 
-		for pixel in self.buffer.iter_mut() {
-			*pixel = self.background_color.0;
-		}
+			for pixel in self.buffer.iter_mut() {
+				*pixel = self.background_color.0;
+			}
 
-		self.canvas.draw_on_to_buffer(&mut self.buffer, self.width, &Cord{x:0,y:0});
+			self.canvas.draw_on_to_buffer(&mut self.buffer, self.width, &Cord{x:0,y:0});
 
-		
+			
 
-		while self.window.as_ref().unwrap().is_open() && !self.window.as_ref().unwrap().is_key_down(Key::Escape) {
-			self.window.as_mut().unwrap().update_with_buffer(&self.buffer, self.width, self.height).unwrap();	
-		}
+			while window.as_ref().unwrap().is_open() && !window.as_ref().unwrap().is_key_down(Key::Escape) {
+				window.as_mut().unwrap().update_with_buffer(&self.buffer, self.width, self.height).unwrap();	
+			}
 	}
 	}
 }
@@ -247,7 +246,8 @@ use crate::graphics::color::{ColorARGB32};
 			}
 		}
 
-		
+		/// returns the height of canvas
+		pub fn height(&self) -> usize { self.shape.height }
 
 	}
 
@@ -261,6 +261,21 @@ pub mod drawing_primitives {
 
 	use crate::graphics::{canvas::{Canvas, CanvasObject, Cord}, color::ColorARGB32};
 
+	/// Options for how to rotate object
+	#[derive(Clone, Copy)]
+	pub enum RotationType {
+		/// No rotations
+		None,
+		/// 90 degrees ccw
+		Left,
+		/// 90 degrees cw
+		Right,
+		/// 180 degrees
+		Flip,
+		/// spcified angle
+		Angle(f32),
+	}
+	
 	/// Options for how an object is filled
 	#[derive(Clone, Copy)]
 	pub enum FillType {
@@ -323,7 +338,7 @@ pub mod drawing_primitives {
 		/// scale of object 
 		pub scale: Cord,
 		/// rotation of object
-		pub rotation: f32,
+		pub rotation: RotationType,
 		/// default color of object might be overiden by the fill border or object spcific settings
 		pub color: ColorARGB32,
 		/// the fill setting for the object
@@ -344,7 +359,7 @@ pub mod drawing_primitives {
 			Self {
 				offset: Cord{x:0, y:0},
 				scale: Cord{x:1,y:1},
-				rotation: 0.0,
+				rotation: RotationType::None,
 				color: ColorARGB32(0xFFFFFFFF),
 				fill: FillType::Fill(None),
 				border: BorderType::Solid(None),
@@ -603,9 +618,138 @@ pub mod drawing_primitives {
 
 /// a text engine using rusttype to rasterize and draw text to canvas
 pub mod drawing_text {
-	// text engine canvas object
-	// takes in text objects and draws them to canvas
 
-	// text object struct that contains text and possible overrideds for default settings
+    use rusttype::{Font, Scale, point};
+
+    use crate::graphics::{canvas::{Canvas, Cord}, color::ColorARGB32, drawing_primitives::{DrawOptions, RotationType}};
+
+	/// text object to be drawn by the text engine
+	pub struct Text {
+		/// override the default font
+		pub font: Option<String>,
+		/// override the default font size
+		pub font_size: Option<Scale>,
+		/// override the default font color
+		pub color: Option<ColorARGB32>,
+		/// String to be drawn
+		pub text: String,
+		/// position to draw the text
+		pub pos: Cord,
+	}
+
+	impl Text {
+		/// creates new text object from string and pos
+		pub fn new(text: &str, pos: Cord) -> Self {
+			Self {
+				font: None,
+				font_size: None,
+				color: None,
+				text: text.to_string(),
+				pos,
+			}
+		}
+	}
+
+
+	/// text engine canvas object
+	/// takes in text objects and draws them to canvas
+	pub struct TextEngine<'a> {
+		/// common canvas object options
+		pub options: DrawOptions,
+		/// path to font file
+		pub font: String,
+		// the font data loaded from the file
+		font_data: Font<'a>,
+		/// text font size
+		pub scale: Scale,
+		/// the list of text object for this engine to draw
+		pub texts: Vec<Text>,
+	}
+
+	impl<'a> TextEngine<'a> {
+		/// creates a new text engine with default settings
+		pub fn new() -> Self {
+			let font_data = include_bytes!("../../resources/Space_Mono/SpaceMono-Regular.ttf");
+			Self {
+				options: DrawOptions::new(),
+				font: "../../resources/Space_Mono/SpaceMono-Regular.ttf".to_string(),
+				font_data: Font::try_from_bytes(font_data as &[u8]).expect("Error constructing Font"),
+				scale: Scale::uniform(18.0),
+				texts: Vec::new(),
+			}
+		}
+
+		/// draws a text object to a canvas
+		pub fn draw_text(&self, canvas: &mut Canvas, text: Text, pos: Cord, rot: RotationType) {
+			let font = match text.font {
+				Some(_) => {
+					// TODO: read data from path and load font
+					&self.font_data
+				},
+				None => &self.font_data
+			};
+
+			let scale = match text.font_size {
+				Some(size) => { size },
+				None => self.scale
+			};
+
+			let color = match text.color {
+				Some(c) => c,
+				None => self.options.color,
+			};
+
+			let v_metrics = font.v_metrics(scale);
+
+			let glyphs: Vec<_> = font.layout(
+				text.text.as_str(),
+				scale,
+				point(0.0, 0.0 + v_metrics.ascent)
+			).collect();
+
+			// TODO: if the width and height of block is needed for fitting to screen
+			//let glyphs_height = (v_metrics.ascent - v_metrics.descent).ceil() as u32;
+			let glyphs_width = {
+				let min_x = glyphs
+					.first()
+					.map(|g| g.pixel_bounding_box().unwrap().min.x)
+					.unwrap();
+				let max_x = glyphs
+					.last()
+					.map(|g| g.pixel_bounding_box().unwrap().max.x)
+					.unwrap();
+				(max_x - min_x) as u32
+			};
+
+			let offset = pos + text.pos + self.options.offset;
+
+			for glyph in glyphs {
+				if let Some(bounding_box) = glyph.pixel_bounding_box() {
+					// TODO handle other origins
+					match canvas.origin {
+						_ => {
+							canvas.origin = super::canvas::CanvasOrigin::TopLeft;
+							let offset = Cord{x: offset.x, y: (canvas.height() as i32) - offset.y};
+							glyph.draw(|x, y, v| {
+								let box_offset = Cord{x: x as i32 + bounding_box.min.x, y: y as i32 + bounding_box.min.y};
+								let rot_cord = match rot {
+									RotationType::Right => {
+										Cord{x: -1*box_offset.y,y:box_offset.x} + offset
+									},
+									_ => box_offset + offset
+								};
+								let c = color.new_alpha((v*255.0) as u8);
+								canvas.paint(&rot_cord, c);
+
+							});
+							canvas.origin = super::canvas::CanvasOrigin::BottomLeft;
+						}
+					}
+					
+				}
+			}
+		}
+	}
+
 
 }
