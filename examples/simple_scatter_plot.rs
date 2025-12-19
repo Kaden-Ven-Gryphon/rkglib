@@ -1,4 +1,5 @@
 
+use rkglib::graphics::canvas::{CanvasShape, Cord};
 use rkglib::graphics::charts::scatter_plot::ScatterPlot;
 use rkglib::graphics::charts;
 use rkglib::math::datatypes::rkgtab::{RkgTabN};
@@ -16,16 +17,13 @@ fn main() {
 	let mut scatter = ScatterPlot::from_table(
 		RkgTabN::from_flat(&data, &[50,2])
 	);
-	scatter.x = 50;
-	scatter.y = 50;
-	scatter.width = 200;
-	scatter.height = 200;
+	scatter.pos = Cord{x: 50, y: 50};
+	scatter.canvas.set_shape(CanvasShape{width: 200, height: 200, depth: 4});
 	chart_window.charts.push(Box::new(scatter));
 
-	chart_window.width = 300;
-	chart_window.height = 300;
+	chart_window.rkgwindow.canvas.set_shape(CanvasShape { width: 300, height: 300, depth: 4 });
 
-	chart_window.background_color.0 = 0xff00000f;
+	chart_window.rkgwindow.background_color.0 = 0xff00000f;
 
 	chart_window.show();
 }

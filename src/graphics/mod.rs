@@ -89,7 +89,7 @@ pub mod canvas {
 
 	use std::ops::{Add, AddAssign};
 
-use crate::graphics::color::{ColorARGB32};
+use crate::graphics::{canvas, color::ColorARGB32};
 
 	/// objects like shapes, lines, curves, gradiants, etc that can be drawn to the canvas
 	pub trait CanvasObject {
@@ -234,6 +234,15 @@ use crate::graphics::color::{ColorARGB32};
 			self.data[flat_index] = color.0
 		}
 	
+		/// takes anouther canvas and draws it on to this canvas at given position
+		pub fn paste_canvas(&mut self, other: &Canvas, pos: Cord) {
+			for i in 0..other.shape.width as i32 {
+				for j in 0..other.shape.height as i32 {
+					self.paint(&Cord { x: i, y: j }, other.get(&Cord { x: i, y: j }));
+				}
+			}
+		}
+
 		/// gets the color of the pixel at the given position
 		pub fn get(&self, pos: &Cord) -> ColorARGB32 {
 			return ColorARGB32(self.data[self.map(*pos)])
@@ -248,6 +257,16 @@ use crate::graphics::color::{ColorARGB32};
 
 		/// returns the height of canvas
 		pub fn height(&self) -> usize { self.shape.height }
+
+		/// returns the width of the canvas
+		pub fn width(&self) -> usize { self.shape.width }
+
+		/// returns the canvas shape
+		pub fn get_shape(&self) -> CanvasShape { self.shape.clone() }
+
+		/// set the canvas shape
+		/// TODO: might need extra logic to handle the change
+		pub fn set_shape(&mut self, shape: CanvasShape) { self.shape = shape }
 
 	}
 

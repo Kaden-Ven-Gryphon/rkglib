@@ -1,6 +1,9 @@
 
 use minifb::{Key, Scale, ScaleMode, Window, WindowOptions};
+use crate::graphics::canvas::{Canvas, CanvasShape, Cord};
+
 use super::color::ColorARGB32;
+use super::window::RkgWindow;
 
 /// The default width of new charts and chartwindows
 pub const DEFAULT_WIDTH: usize = 400;
@@ -13,24 +16,22 @@ pub const DEFAULT_HEIGHT: usize = 400;
 
 /// Trait for objects that can be drawn to a ChartWindow must implement
 pub trait Chart {
-	/// returns a vector containing the rendered image of the object
-	fn draw(&self) -> Vec<u32>;
-	/// returns a vector containing the rendered image of the chart at time t
-	fn draw_with_time(&self, t: f64) -> Vec<u32>;
-	/// draws the chart to a buffer at time t
-	fn draw_to_buf_with_time(&self, t:f64, buf:&mut Vec<u32>, buf_width:usize, buf_height:usize);
+	/// updates its internal canvas and returns a referance to it
+	fn draw(&mut self) -> &Canvas;
+	/// updates its internal canvas and returns a referance to it
+	fn draw_with_time(&mut self, t: f64) -> &Canvas;
 	/// returns tuple with the position of the chart
-	fn pos(&self) -> (usize, usize);
+	fn pos(&self) -> Cord;
 	/// returns the width and height of the chart as a tuple
-	fn shape(&self) -> (usize, usize);
+	fn shape(&self) -> CanvasShape;
 	/// returns width of chart
 	fn width(&self) -> usize;
 	/// returns height of chart
 	fn height(&self) -> usize;
 	/// returns x cord of top right of chart
-	fn x(&self) -> usize;
+	fn x(&self) -> i32;
 	/// returns y cord of top right of chart
-	fn y(&self) -> usize;
+	fn y(&self) -> i32;
 }
 
 /// Test fractal visulization from the minifb create modified to implement the Chart trait
@@ -44,18 +45,12 @@ pub mod scatter_plot;
 
 /// This is the default window that can display chart objects
 pub struct ChartWindow {
-	/// name of window
-	pub name: String,
-	/// width of window
-	pub width: usize,
-	/// height of window
-	pub height: usize,
-	/// background color
-	pub background_color: ColorARGB32,
-	window: Option<Window>,
-	buffer: Vec<u32>,
+	/// default window struct
+	pub rkgwindow: RkgWindow,
+	/// minifb window
+	pub window: Option<Window>,
 	/// the list of charts to draw to window
-	pub charts: Vec<Box<dyn Chart>>,
+	pub charts: Vec<Box< dyn Chart>>,
 	/// current time
 	pub time:f64,
 	/// time step size
@@ -66,69 +61,33 @@ impl ChartWindow {
 	/// makes a ChartWindow with default settings
 	pub fn new() -> Self {
 		Self {
-			name: "New Chart".to_string(),
-			width: DEFAULT_WIDTH,
-			height: DEFAULT_HEIGHT,
-			background_color: ColorARGB32(0xffffffff),
-			window: None,
-			buffer: vec![0xffffffff; 1000 * 1000],
+			rkgwindow: RkgWindow::new("Charts", DEFAULT_WIDTH, DEFAULT_HEIGHT, ColorARGB32(0xFF050F0F)),
+			window: None, 
 			charts: Vec::new(),
 			time: 0.0,
 			time_step: 0.1
 		}
 	}
 
-	/// map point i from space i to space j with space i at pos xy
-	pub fn map(
-		i:usize,
-		i_width:usize,
-		x:usize,
-		y:usize,
-		j_width:usize,
-	) -> usize {
-		let i_x = i % i_width;
-		let i_y = i / i_width;
-		return (i_x+x)+(i_y+y)*j_width
-	}
 
 	/// calls draw on all charts and draws them to window buffer
 	pub fn update(&mut self) {
 		if self.window.is_some(){
-			for chart in &self.charts {
-				let buf = chart.draw_with_time(self.time);
-				for (i, pixel) in buf.iter().enumerate() {
-					let j = Self::map(
-						i,
-						chart.shape().0,
-						chart.pos().0,
-						chart.pos().1,
-						self.width,
-					);
-					if j < self.buffer.len() {
-						self.buffer[j] = *pixel
-					}
-				}
+			for i in 0..self.charts.len() {
+				let canvas = self.charts[i].draw_with_time(self.time);
+				self.rkgwindow.canvas.paste_canvas(canvas, Cord::zero());
 			}
 
-			self.window.as_mut().unwrap().update_with_buffer(&self.buffer, self.width, self.height).unwrap()
+			self.window.as_mut().unwrap().update_with_buffer(&self.rkgwindow.buffer, self.rkgwindow.width, self.rkgwindow.height).unwrap()
 		} 
 	}
 
-	/// calls draw to buffer on charts to draw directly to window buffer
-	pub fn update_direct(&mut self) {
-		if self.window.is_some() {
-			for chart in &self.charts {
-				chart.draw_to_buf_with_time(self.time, &mut self.buffer, self.width, self.height);
-			}
-			self.window.as_mut().unwrap().update_with_buffer(&self.buffer, self.width, self.height).unwrap()
-		}
-	}
 	/// Opens window and renders all charts to window
 	pub fn show(&mut self) {
 		self.window = Some(Window::new(
-			self.name.as_str(),
-			self.width,
-			self.height,
+			self.rkgwindow.name.as_str(),
+			self.rkgwindow.width,
+			self.rkgwindow.height,
 			WindowOptions {
 				resize: true,
 				scale: Scale::X2,
@@ -142,17 +101,17 @@ impl ChartWindow {
 		self.window.as_mut().unwrap().set_target_fps(60);
 
 		self.window.as_mut().unwrap().set_background_color(
-			self.background_color.r(),
-			self.background_color.g(),
-			self.background_color.b()
+			self.rkgwindow.background_color.r(),
+			self.rkgwindow.background_color.g(),
+			self.rkgwindow.background_color.b()
 		);
 
-		for pixel in self.buffer.iter_mut() {
-			*pixel = self.background_color.0;
+		for pixel in self.rkgwindow.buffer.iter_mut() {
+			*pixel = self.rkgwindow.background_color.0;
 		}
 
 		while self.window.as_ref().unwrap().is_open() && !self.window.as_ref().unwrap().is_key_down(Key::Escape) {
-			self.update_direct();
+			self.update();
 			self.time+=self.time_step;
 		}
 	}

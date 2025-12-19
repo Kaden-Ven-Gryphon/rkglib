@@ -4,18 +4,17 @@ use num_traits::NumCast;
 use num_traits::cast;
 
 use super::{DEFAULT_HEIGHT, DEFAULT_WIDTH, Chart, ChartWindow};
+use crate::graphics::canvas::Canvas;
+use crate::graphics::canvas::CanvasShape;
+use crate::graphics::canvas::Cord;
+use crate::graphics::color::ColorARGB32;
 use crate::math::datatypes::rkgtab::RkgTabN;
 
 /// A 2d scatter plot chart compatible with the ChartWindow
 pub struct ScatterPlot<T: Clone + Copy + Display> {
-	/// width
-	pub width: usize,
-	/// height
-	pub height: usize,
-	/// x pos in window
-	pub x: usize,
-	/// y pos in window
-	pub y:usize,
+	/// canvas char is drawn to
+	pub canvas: Canvas,
+	pub pos: Cord,
 	/// data that the scatter plot displays, must be 2d
 	pub data_table: RkgTabN<T>,
 	/// which index to use for the charts x axis
@@ -37,10 +36,8 @@ pub struct ScatterPlot<T: Clone + Copy + Display> {
 impl<T: Copy+Clone+Display> ScatterPlot<T> {
 	pub fn from_table(table: RkgTabN<T>) -> Self{
 		Self {
-			width: DEFAULT_WIDTH,
-			height: DEFAULT_HEIGHT,
-			x:0,
-			y:0,
+			canvas: Canvas::new(CanvasShape{width:DEFAULT_WIDTH, height:DEFAULT_HEIGHT, depth:4}, crate::graphics::canvas::CanvasOrigin::BottomLeft),
+			pos: Cord::zero(),
 			data_table: table,
 			x_axis:0,
 			y_axis:1,
@@ -55,21 +52,13 @@ impl<T: Copy+Clone+Display> ScatterPlot<T> {
 
 
 impl<T: NumCast+Clone+Copy+Display> Chart for ScatterPlot<T> {
-	fn draw(&self) -> Vec<u32> {
-		let mut buf = Vec::new();
-
-		return buf
+	fn draw(&mut self) -> &Canvas {
+		self.draw_with_time(0.0)
 	}
 
-	fn draw_with_time(&self, t: f64) -> Vec<u32> {
-		let mut buf = Vec::new();
-
-		return buf
-	}
-
-	fn draw_to_buf_with_time(&self, t:f64, buf:&mut Vec<u32>, buf_width:usize, buf_height:usize) {
-		let mut cord: Vec<usize> = vec![0; 2];
+	fn draw_with_time(&mut self, t: f64) -> &Canvas {
 		
+		let mut cord = vec![0;2];
 		for i in 0..self.data_table.shape()[0] {
 			cord[0] = i;
 			cord[1] = self.x_axis;
@@ -77,42 +66,37 @@ impl<T: NumCast+Clone+Copy+Display> Chart for ScatterPlot<T> {
 			let x:i32 = cast(self.data_table.get(&cord)).unwrap();
 			cord[1] = self.y_axis;
 			let y:i32 = cast(self.data_table.get(&cord)).unwrap();
-			let y_flip = -y + (self.height as i32);
-
-			let index = x + y_flip* self.width as i32;
-
-			if index > 0 {
-				let map_index = ChartWindow::map(index as usize, self.width, self.x, self.y, buf_width);
-
-				buf[map_index] = 0xFF00FF00;
-			}
 
 
+			self.canvas.paint(&Cord { x, y }, ColorARGB32(0xFF00FF00));
 			
+
 		}
+		&self.canvas
 	}
 
-	fn pos(&self) -> (usize, usize) {
-		return (self.x, self.y)
+
+	fn height(&self) -> usize {
+		self.canvas.height()
 	}
 
-	fn shape(&self) -> (usize, usize) {
-		return (self.width, self.height)
+	fn pos(&self) -> Cord {
+		self.pos
+	}
+
+	fn shape(&self) -> CanvasShape {
+		self.canvas.get_shape()
 	}
 
 	fn width(&self) -> usize {
-		self.width
+		self.canvas.width()
 	}
 
-	fn height(&self) -> usize {
-		self.height
+	fn x(&self) -> i32 {
+		self.pos.x
 	}
 
-	fn x(&self) -> usize {
-		self.x
-	}
-
-	fn y(&self) -> usize {
-		self.y
+	fn y(&self) -> i32 {
+		self.pos.y
 	}
 }
