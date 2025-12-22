@@ -14,6 +14,7 @@ use crate::math::datatypes::rkgtab::RkgTabN;
 pub struct ScatterPlot<T: Clone + Copy + Display> {
 	/// canvas char is drawn to
 	pub canvas: Canvas,
+	/// postion to paste chart into the window canvas
 	pub pos: Cord,
 	/// data that the scatter plot displays, must be 2d
 	pub data_table: RkgTabN<T>,
@@ -34,6 +35,7 @@ pub struct ScatterPlot<T: Clone + Copy + Display> {
 }
 
 impl<T: Copy+Clone+Display> ScatterPlot<T> {
+	/// creates a new scatter plot using a table of data
 	pub fn from_table(table: RkgTabN<T>) -> Self{
 		Self {
 			canvas: Canvas::new(CanvasShape{width:DEFAULT_WIDTH, height:DEFAULT_HEIGHT, depth:4}, crate::graphics::canvas::CanvasOrigin::BottomLeft),

@@ -68,10 +68,11 @@ impl Chart for TestFractalChart {
 				}
 
 				let pixel_color = if depth == self.fractal_depth {
-					0x00
+					0xFF000000 | 0x00
 				} else {
-					depth * 32 % 255
+					0xFF000000 | (depth * 32 % 255)
 				};
+				
 				self.canvas.paint(&Cord { x: i, y: j }, crate::graphics::color::ColorARGB32(pixel_color));
 			}
 

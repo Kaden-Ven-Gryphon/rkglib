@@ -7,7 +7,9 @@ pub mod charts;
 /// This modual contains the basic window container
 /// TODO: Add basic control handling, things like frame rate control etc
 pub mod window {
-	use minifb::{Scale, ScaleMode, Window, WindowOptions, Key};
+	use std::hint;
+
+use minifb::{Scale, ScaleMode, Window, WindowOptions, Key};
 
 	use crate::graphics::{canvas::{Canvas, CanvasShape, Cord}, color::ColorARGB32};
 
@@ -77,7 +79,15 @@ pub mod window {
 			while window.as_ref().unwrap().is_open() && !window.as_ref().unwrap().is_key_down(Key::Escape) {
 				window.as_mut().unwrap().update_with_buffer(&self.buffer, self.width, self.height).unwrap();	
 			}
-	}
+		}
+
+		/// resize the window buffer and canvas
+		pub fn resize(&mut self, width:usize, height:usize) {
+			self.width = width;
+			self.height = height;
+			self.buffer = vec![self.background_color.0; width*height];
+			self.canvas.set_shape(CanvasShape { width, height, depth: 4 });
+		}
 	}
 }
 
@@ -231,14 +241,16 @@ use crate::graphics::{canvas, color::ColorARGB32};
 		/// paints the pixel at position pos the given color
 		pub fn paint(&mut self, pos: &Cord, color: ColorARGB32) {
 			let flat_index = self.map(*pos);
-			self.data[flat_index] = color.0
+			
+				self.data[flat_index] = color.0
+			
 		}
 	
 		/// takes anouther canvas and draws it on to this canvas at given position
 		pub fn paste_canvas(&mut self, other: &Canvas, pos: Cord) {
 			for i in 0..other.shape.width as i32 {
 				for j in 0..other.shape.height as i32 {
-					self.paint(&Cord { x: i, y: j }, other.get(&Cord { x: i, y: j }));
+					self.paint(&Cord { x: i+pos.x, y: j+pos.y }, other.get(&Cord { x: i, y: j }));
 				}
 			}
 		}
@@ -266,7 +278,10 @@ use crate::graphics::{canvas, color::ColorARGB32};
 
 		/// set the canvas shape
 		/// TODO: might need extra logic to handle the change
-		pub fn set_shape(&mut self, shape: CanvasShape) { self.shape = shape }
+		pub fn set_shape(&mut self, shape: CanvasShape) {
+			self.data = vec![0; shape.width*shape.height];
+			self.shape = shape;
+		}
 
 	}
 

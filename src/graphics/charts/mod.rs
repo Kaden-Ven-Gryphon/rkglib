@@ -51,6 +51,11 @@ pub struct ChartWindow {
 	pub window: Option<Window>,
 	/// the list of charts to draw to window
 	pub charts: Vec<Box< dyn Chart>>,
+	/// update time or pause
+	pub run_time: bool,
+	/// used to redraw on update
+	need_redraw: bool,
+	
 	/// current time
 	pub time:f64,
 	/// time step size
@@ -64,6 +69,8 @@ impl ChartWindow {
 			rkgwindow: RkgWindow::new("Charts", DEFAULT_WIDTH, DEFAULT_HEIGHT, ColorARGB32(0xFF050F0F)),
 			window: None, 
 			charts: Vec::new(),
+			run_time: false,
+			need_redraw: true,
 			time: 0.0,
 			time_step: 0.1
 		}
@@ -73,11 +80,16 @@ impl ChartWindow {
 	/// calls draw on all charts and draws them to window buffer
 	pub fn update(&mut self) {
 		if self.window.is_some(){
-			for i in 0..self.charts.len() {
-				let canvas = self.charts[i].draw_with_time(self.time);
-				self.rkgwindow.canvas.paste_canvas(canvas, Cord::zero());
-			}
+			if self.need_redraw {
+				for i in 0..self.charts.len() {
+					let pos = self.charts[i].pos().clone();
+					let canvas = self.charts[i].draw_with_time(self.time);
+					self.rkgwindow.canvas.paste_canvas(canvas, pos);
+				}
 
+				self.rkgwindow.canvas.draw_on_to_buffer(&mut self.rkgwindow.buffer, self.rkgwindow.width, &Cord::zero());
+				self.need_redraw = false;
+			}
 			self.window.as_mut().unwrap().update_with_buffer(&self.rkgwindow.buffer, self.rkgwindow.width, self.rkgwindow.height).unwrap()
 		} 
 	}
@@ -110,9 +122,14 @@ impl ChartWindow {
 			*pixel = self.rkgwindow.background_color.0;
 		}
 
+		self.update();
+
 		while self.window.as_ref().unwrap().is_open() && !self.window.as_ref().unwrap().is_key_down(Key::Escape) {
 			self.update();
-			self.time+=self.time_step;
+			if self.run_time {
+				self.time+=self.time_step;
+				self.need_redraw = true;
+			}
 		}
 	}
 }
