@@ -1,16 +1,6 @@
 
-use rkglib::graphics::charts::test_fractal_chart::TestFractalChart;
-use rkglib::graphics::charts;
+
 fn main() {
-	let mut chart_window = charts::ChartWindow::new();
-	let fractal = TestFractalChart::new();
-	chart_window.charts.push(Box::new(fractal));
-
-	chart_window.width = 1000;
-	chart_window.height = 1000;
-
-	chart_window.background_color.0 = 0xff00000f;
-
-	chart_window.show();
+	
 }
 
